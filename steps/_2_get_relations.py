@@ -64,7 +64,7 @@ def _fallback_sig(entities: list[str], is_conversation: bool, context: str = "")
 
 # ---------- 4. 对外主函数 ---------- #
 def get_quads(
-    dspy: dspy.dspy,
+    dspy,
     entities: list[str],
     is_conversation: bool = False,
     input_data: str = ""

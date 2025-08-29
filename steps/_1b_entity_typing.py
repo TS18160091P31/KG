@@ -15,7 +15,7 @@ class EntityWithType(dspy.Signature):
     context: str = dspy.InputField(desc="实体出现的原始文本上下文")
     typed_entities: list[dict] = dspy.OutputField(desc="每个实体及其类型，如 {'name': 'XXX', 'type': '设备'}")
 
-def classify_entities(dspy: dspy.dspy, entity_list: List[str], context: str) -> List[dict]:
+def classify_entities(dspy, entity_list: List[str], context: str) -> List[dict]:
     """
     输入实体列表和原始上下文文本，返回带类型的实体结构。
     """

@@ -22,7 +22,7 @@ class EventAnswerGenerator(dspy.Signature):
     answer: str = dspy.OutputField(desc="问题的详细回答")
     confidence:str = dspy.OutputField(desc="对于回答置信度的自评，仅允许输出高，中，低三档")
 
-def generate_analysis_answer(dspy: dspy.dspy, event_article: str, question: str) -> str:
+def generate_analysis_answer(dspy, event_article: str, question: str) -> str:
     """
     输入：事件文章与分析维度
     输出：回答

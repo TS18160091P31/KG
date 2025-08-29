@@ -23,7 +23,7 @@ class BranchRelevanceRanker(Signature):
     ranked: List[Dict[str, Any]] = dspy.OutputField(desc="[{sub_question, score, rationale}]（按分值降序）")
 
 
-def generate_rank(dspy: dspy.dspy, main_question: str, sub_questions: str) -> List[str]:
+def generate_rank(dspy, main_question: str, sub_questions: str) -> List[str]:
     """
     输入：简要事件描述 + 用户提问
     输出：适合向量检索的多条细化信息需求（可输入RAG召回模块）

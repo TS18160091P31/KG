@@ -16,7 +16,7 @@ class EventQuestionGenerator(dspy.Signature):
     questions: Dict[str, List[str]] = dspy.OutputField(desc="提出的具体分析问题列表,格式为 {dimension: [questions]}")
 
 
-def generate_analysis_questions(dspy: dspy.dspy, event_article: str, dimension: str,num=5) -> List[str]:
+def generate_analysis_questions(dspy, event_article: str, dimension: str,num=5) -> List[str]:
     """
     输入：事件文章与分析维度
     输出：维度对应的问题列表

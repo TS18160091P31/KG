@@ -11,7 +11,7 @@ class ExtractStructuredAnswer(dspy.Signature):
     - "evidence"：用原文中的一句或多句话逐字原样引用作为支撑依据，一个符号都不可以修改，直接给出完整一句原文。
     - "reasoning"：说明你是如何从原文中得出该结论的，逻辑清晰，不能扩展原文以外的内容。解释可以分多条：
     格式如下：
-    ["解释1","解释二"....]
+    ["解释一","解释二"....]
     - "confidence"：包括推断可信度与信息来源可靠性，每项包括等级与理由，格式如下：
       {
         "推断可信度": {
@@ -30,7 +30,7 @@ class ExtractStructuredAnswer(dspy.Signature):
     json_response: str = dspy.OutputField(desc="严格结构化 JSON 数组格式回答")
 
 
-def extract_structured_answer(dspy: dspy.dspy, question: str, context: str):
+def extract_structured_answer(dspy, question: str, context: str):
     """
     用于提问并从上下文中抽取多个结构化结论。
     返回格式为 JSON 数组（或固定失败字符串）。

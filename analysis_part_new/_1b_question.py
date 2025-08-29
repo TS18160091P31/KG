@@ -37,7 +37,7 @@ class RAGInformationNeedGenerator(dspy.Signature):
     question: str = dspy.InputField(desc="需要分析和回答的具体问题")
     info_needs: Dict[str, List[str]] = dspy.OutputField(desc="格式为{question: [详细信息需求1, 信息需求2, ...]}")
 
-def generate_detailed_questions(dspy: dspy.dspy, event_title: str, question: str) -> List[str]:
+def generate_detailed_questions(dspy, event_title: str, question: str) -> List[str]:
     """
     输入：简要事件描述 + 用户提问
     输出：适合向量检索的多条细化信息需求（可输入RAG召回模块）

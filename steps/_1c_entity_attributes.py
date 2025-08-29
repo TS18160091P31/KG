@@ -60,7 +60,7 @@ class EntityAttributeExtraction(dspy.Signature):
     )
 
 
-def extract_entity_attributes(dspy: dspy.dspy, entity_list: List[str], context: str) -> List[Dict]:
+def extract_entity_attributes(dspy, entity_list: List[str], context: str) -> List[Dict]:
     extractor = dspy.Predict(EntityAttributeExtraction)
     result = extractor(entity_list=entity_list, context=context)
     return result.entity_attributes

@@ -42,7 +42,7 @@ class ConversationEntities(dspy.Signature):
 # ------------------------------------------------------------
 # 对外函数
 # ------------------------------------------------------------
-def get_entities(dspy: dspy.dspy,
+def get_entities(dspy,
                  input_data: str,
                  is_conversation: bool = False) -> List[str]:
     """
