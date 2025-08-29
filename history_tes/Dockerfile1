@@ -1,0 +1,25 @@
+# 使用官方 Python 精简镜像作为基础
+FROM python:3.10-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 拷贝所有项目文件
+COPY . /app
+
+# 拷贝本地的 wheelhouse 文件夹
+COPY wheelhouse/ /app/wheelhouse/
+
+# 安装依赖（优先离线兜底联网）
+# 解释：先尝试本地安装，若缺失则自动联网下载
+RUN pip install --prefer-binary --find-links=/app/wheelhouse -r requirements.txt || \
+    pip install --upgrade -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 创建输出目录（用于保存抽取结果）
+RUN mkdir -p outputs/entities outputs/relations
+
+# 暴露 FastAPI 服务端口
+EXPOSE 8000
+
+# 启动服务（通过 uvicorn 运行 FastAPI 应用）
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
