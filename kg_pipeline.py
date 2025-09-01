@@ -37,7 +37,8 @@ def run_kg(text: str) -> dict:
         api_key=settings.API_KEY,
         api_base=settings.OLLAMA_BASE
     )
-    dspy.configure(lm=lm)
+    # dspy.configure(lm=lm)
+    dspy.context(lm=lm)
 
     # Step 1: 实体抽取与属性处理
     entities = get_entities(dspy=dspy, input_data=text, is_conversation=False)

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     OLLAMA_BASE: str = "http://localhost:11434"   # Docker 默认
-    OLLAMA_MODEL: str = "ollama_chat/qwen3:14b"               # 你的模型 tag
+    OLLAMA_MODEL: str = "ollama/qwen3:1.7b"               # 你的模型 tag
     EMBED_BASE:str= "http://localhost:11434"
     API_KEY: str=""
     OUTPUT_DIR: Path = Path("outputs")

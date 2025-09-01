@@ -39,7 +39,7 @@ def split_text_into_paragraphs(text: str) -> list[str]:
     return paragraphs
 
 # Function to generate embeddings using Ollama
-def generate_embeddings(content, model='mxbai-embed-large'):
+def generate_embeddings(content, model='nomic-embed-text'):
     """
     使用提供的模型和URL生成内容的嵌入。
     :param content: 输入的文本内容

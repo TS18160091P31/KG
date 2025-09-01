@@ -1,34 +1,41 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException,Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel
-from kg_pipeline import run_kg,run_structured_qa
+from kg_pipeline import run_kg, run_structured_qa
 import requests
 import os
-from typing import List,Tuple,Dict,Any,Optional,Union
-from QA_part._1_text import get_relevant_answer,generate_embeddings,split_text_into_sentences,split_text_into_paragraphs  # Add the new function import
+from typing import List, Tuple, Dict, Any, Optional, Union
+from QA_part._1_text import get_relevant_answer, generate_embeddings, split_text_into_sentences, \
+    split_text_into_paragraphs  # Add the new function import
 
 app = FastAPI(title="KG Extraction Service",
               description="封装 kg_gen 流水线，提供实体属性 / 关系抽取服务,问答服务")
 # 初始化
 from config import settings
 import dspy
+
 lm = dspy.LM(
-model=settings.OLLAMA_MODEL,
-api_key=settings.API_KEY,
-api_base=settings.OLLAMA_BASE
+    model=settings.OLLAMA_MODEL,
+    api_key=settings.API_KEY,
+    api_base=settings.OLLAMA_BASE
 )
 dspy.configure(lm=lm)
+
 
 class QARequest(BaseModel):
     question: str
     context: str
 
+
 class QAResponseItem(BaseModel):
-    answer: List[Any]              # ["结论", "原文", ["解释1", "解释2"]]
-    confidence: Dict[str, Any]     # {"推断可信度": {...}, "信息来源可靠性": {...}}
+    answer: List[Any]  # ["结论", "原文", ["解释1", "解释2"]]
+    confidence: Dict[str, Any]  # {"推断可信度": {...}, "信息来源可靠性": {...}}
+
 
 class QAResponse(BaseModel):
     results: List[QAResponseItem]
     note: Optional[str] = None
+
+
 #问答结构化抽取（结论/证据/推理 + 置信度）
 @app.post("/structured_extract", response_model=QAResponse)
 async def structured_extract(req: QARequest):
@@ -57,12 +64,14 @@ async def structured_extract(req: QARequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class EntityOutput(BaseModel):
     type: str
     word: str
     word_c: str
     start: int
     end: int
+
 
 class KGResponse(BaseModel):
     string: str
@@ -73,14 +82,18 @@ class KGResponse(BaseModel):
     envent_svos: List[Tuple[str, str, str]]
     res_re_infer: List[Any]
     triple_pair_new: List[Any]
-    
+
+
 class KGRequest(BaseModel):
     text: str
+
+
 # 知识图谱要素抽取（实体、关系、SVO、推理结果等）
 @app.post("/extract", response_model=KGResponse)
 async def extract(text: str = Form(None), file: UploadFile = File(None)):
     if text:
-        return run_kg(text)
+        result = run_kg(text)
+        return result
     elif file:
         try:
             content = (await file.read()).decode("utf-8")
@@ -89,6 +102,8 @@ async def extract(text: str = Form(None), file: UploadFile = File(None)):
             raise HTTPException(400, "文件必须为 UTF‑8 文本")
     else:
         raise HTTPException(status_code=400, detail="请提供文本或文件")
+
+
 #ollama连接测试
 @app.get("/ping_ollama")
 def ping_ollama():
@@ -98,22 +113,27 @@ def ping_ollama():
         return {"status": "ok", "response": r.text}
     except Exception as e:
         return {"status": "fail", "error": str(e)}
+
+
 # Define the request model for the relevant paragraphs endpoint
 class RelevantContextRequest(BaseModel):
     question: str
     context: str
 
+
 class RelevantContextResponse(BaseModel):
     relevant_context: list
-    note: Optional[str] = None    
+    note: Optional[str] = None
 # Define the endpoint to return only the relevant paragraphs or sentences
+
+
 #返回相似的段落
 @app.post("/get_relevant_paragraphs", response_model=RelevantContextResponse)
 async def get_relevant_paragraphs(req: RelevantContextRequest):
     try:
         # Get the relevant context (paragraphs/sentences) based on the input question and context
         relevant_context = get_relevant_answer(req.context, req.question, top_k=20)
-        
+
         # If no relevant context is found
         if not relevant_context:
             return {
@@ -127,7 +147,9 @@ async def get_relevant_paragraphs(req: RelevantContextRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-#段落+回答    
+
+
+#段落+回答
 @app.post("/combined_extract")
 async def combined_extract(req: QARequest):
     try:
@@ -165,32 +187,41 @@ async def combined_extract(req: QARequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class EmbeddingRequest(BaseModel):
     text: str
-    model: Optional[str] = "mxbai-embed-large"
+    model: Optional[str] = "nomic-embed-text"
+
 
 class EmbeddingResponse(BaseModel):
     text: str
     embedding: List[float]
     dimension: int
+
+
 #获取句子向量
 @app.post("/get_embedding", response_model=EmbeddingResponse)
-def get_embedding(req: EmbeddingRequest):
+def get_embedding(req: str = Form(None)):
     try:
-        response = generate_embeddings(req.text)
+        response = generate_embeddings(req)
         return {
-            "text": req.text,
+            "text": req,
             "embedding": response["embedding"],
             "dimension": len(response["embedding"])
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ollama embedding error: {str(e)}")
+
+
 class SplitRequest(BaseModel):
     text: str
+
 
 class SplitResponse(BaseModel):
     sentences: List[str]
     count: int
+
+
 #将文章分割为句子
 @app.post("/split_sentences", response_model=SplitResponse)
 def split_sentences(req: SplitRequest):
@@ -202,6 +233,8 @@ def split_sentences(req: SplitRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sentence splitting error: {str(e)}")
+
+
 #文章分割为段落
 @app.post("/split_paragraphs", response_model=SplitResponse)
 def split_paragraphs(req: SplitRequest):
@@ -213,50 +246,68 @@ def split_paragraphs(req: SplitRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sentence splitting error: {str(e)}")
-   
+
+
 from analysis_part_new._1_question import generate_analysis_questions
+
+
 class GenerateQuestionRequest(BaseModel):
     event_article: str  # 事件文章内容
     dimension: str  # 分析维度
     num: int = 5  # 至少提出的问题数
 
+
 class GenerateQuestionResponse(BaseModel):
     questions: dict  # {维度: [问题列表]}
+
+
 #生成问题
 @app.post("/generate_questions", response_model=GenerateQuestionResponse)
 async def generate_questions(req: GenerateQuestionRequest):
     try:
 
-        questions = generate_analysis_questions(dspy=dspy, event_article=req.event_article, dimension=req.dimension, num=req.num)
+        questions = generate_analysis_questions(dspy=dspy, event_article=req.event_article, dimension=req.dimension,
+                                                num=req.num)
         return {"questions": questions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 from analysis_part_new._1b_question import generate_detailed_questions
+
+
 class GenerateDetailRequest(BaseModel):
     text: str  # 事件基本内容
     question: str  # 分析维度
 
+
 class GenerateDetailResponse(BaseModel):
     detail_q: list  # {维度: [问题列表]}
+
+
 #生成回答问题需要的信息
 @app.post("/generate_details", response_model=GenerateDetailResponse)
 async def generate_details(req: GenerateDetailRequest):
     try:
-        detail_q=generate_detailed_questions(dspy=dspy,event_title=req.text,question=req.question)
+        detail_q = generate_detailed_questions(dspy=dspy, event_title=req.text, question=req.question)
         # print(f"  回答: {answer}")
         return {"detail_q": detail_q[req.question]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 from analysis_part_new._2_answers import generate_analysis_answer
+
+
 class AnswerQuestionRequest(BaseModel):
     event_article: str  # 事件文章内容
-    question: str       # 分析问题
+    question: str  # 分析问题
+
 
 class AnswerQuestionResponse(BaseModel):
-    answer: str         # 问题的详细回答
+    answer: str  # 问题的详细回答
     confidence: str
+
 
 @app.post("/answer_question", response_model=AnswerQuestionResponse)
 async def answer_question(req: AnswerQuestionRequest):
@@ -279,18 +330,26 @@ async def answer_question(req: AnswerQuestionRequest):
         return AnswerQuestionResponse(answer=answer, confidence=confidence)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))    
+        raise HTTPException(status_code=500, detail=str(e))
 
-from analysis_part_new._1c_rank import generate_rank    
+
+from analysis_part_new._1c_rank import generate_rank
+
+
 class RankRequest(BaseModel):
     main_question: str  # 事件文章内容
     sub_questions: Union[List[str], str]  # 分析问题
+
+
 class RankItem(BaseModel):
-    sub_question: str     # 子问题文本
-    score: int               # 0~3 分
-    rationale: str         # 打分理由
+    sub_question: str  # 子问题文本
+    score: int  # 0~3 分
+    rationale: str  # 打分理由
+
+
 class RankResponse(BaseModel):
     answer: List[RankItem]  # 问题的详细回答
+
 
 #回答问题
 @app.post("/get_rank", response_model=RankResponse)
@@ -300,19 +359,24 @@ async def get_rank(req: RankRequest):
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 # =====================================================================================
 # 1) /entity_types —— 实体类型判定（过滤掉“其他”）
 # =====================================================================================
 from steps._1b_entity_typing import classify_entities
 from steps._1_get_entities import get_entities
+
+
 class EntityTypesRequest(BaseModel):
     context: str
+
 
 class EntityTypeItem(BaseModel):
     # 按你规则保留 5 类（人物/组织机构/国家地区/地点/设备），自动丢弃“其他”
     name: str
     type: str
+
 
 @app.post("/entity_types", response_model=List[EntityTypeItem])
 async def entity_types(req: EntityTypesRequest):
@@ -329,16 +393,21 @@ async def entity_types(req: EntityTypesRequest):
 # =====================================================================================
 from steps.entity_attr import extract_entity_attributes
 
+
 class EntityAttrsRequest(BaseModel):
     # 仅传入“具体航母”的实体名列表（类型应为“设备”）
     entity_list: List[str]
     context: str
 
+
 class EntityAttrsItem(BaseModel):
     name: str
     attributes: List[str]
 
-config_path="config/entity_attr.yaml"
+
+config_path = "config/entity_attr.yaml"
+
+
 @app.post("/entity_attrs", response_model=List[EntityAttrsItem])
 async def entity_attrs(req: EntityAttrsRequest):
     try:
@@ -356,6 +425,8 @@ async def entity_attrs(req: EntityAttrsRequest):
 # 3) /relations —— 关系四元组抽取 (time, subject, location, predicate)
 # =====================================================================================
 from steps._2_get_relations import get_quads
+
+
 class RelationsRequest(BaseModel):
     source_text: str
     entities: List[str]
@@ -381,23 +452,28 @@ async def relations(req: RelationsRequest):
             {"time": t, "subject": s, "location": loc, "predicate": p}
             for (t, s, loc, p) in quads
         ]
-        return  answer
+        return answer
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))   
+        raise HTTPException(status_code=500, detail=str(e))
 
-##别名定位
+    ##别名定位
+
+
 from QA_part.find_alias import find_alias_positions
 from steps._1d_entity_aliases import extract_aliases_llm
+
+
 class AliasMatch(BaseModel):
     alias: str
     start: int
     end: int
 
+
 class AliasRequest(BaseModel):
     text: str
-    entities: List[str] 
+    entities: List[str]
 
-    
+
 @app.post("/alias_positions", response_model=Dict[str, List[AliasMatch]])
 async def relations(req: AliasRequest):
     entity_aliases = {}
@@ -405,7 +481,7 @@ async def relations(req: AliasRequest):
         aliases = extract_aliases_llm(dspy, entity_name=ent, context=req.text)
         entity_aliases[ent] = aliases
     entity_positions_raw = find_alias_positions(req.text, entity_aliases)
-    return  entity_positions_raw   
+    return entity_positions_raw
 # from fastapi.responses import StreamingResponse
 # from pathlib import Path
 
